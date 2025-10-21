@@ -1,8 +1,9 @@
 # ======== LangChain 関連 ========
-langchain==0.2.0
-langchain-core==0.2.43
 langchain-community==0.2.0
 langchain-text-splitters==0.2.0
+langchain>=0.2.0,<0.3.0
+langchain-core>=0.2.0,<0.3.0
+langsmith>=0.1.112,<0.2.0
 
 # ======== OpenAI / AI SDK ========
 openai==1.109.1
@@ -21,7 +22,6 @@ requests==2.32.5
 urllib3==2.5.0
 SQLAlchemy==2.0.20
 jsonpatch==1.33
-langsmith==0.1.17
 tenacity==8.2.0
 packaging==23.2
 defusedxml==0.7.1
