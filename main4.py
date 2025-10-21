@@ -15,9 +15,10 @@ def setup_langsmith():
         tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").strip().lower() in ["true", "1", "yes"]
 
         st.sidebar.markdown("## 🧠 LangSmith ログ設定")
-        st.sidebar.write("LANGCHAIN_API_KEY:", api_key)
-        st.sidebar.write("LANGCHAIN_TRACING_V2:", os.getenv("LANGCHAIN_TRACING_V2"))
-        st.sidebar.write("tracing_enabled:", tracing_enabled)
+        # デバッグ用表示（不要な場合コメントアウト）
+        # st.sidebar.write("LANGCHAIN_API_KEY:", api_key)
+        # st.sidebar.write("LANGCHAIN_TRACING_V2:", os.getenv("LANGCHAIN_TRACING_V2"))
+        # st.sidebar.write("tracing_enabled:", tracing_enabled)
 
         if not api_key:
             st.sidebar.warning("⚠ LangSmith APIキーが未設定です。")
@@ -219,7 +220,7 @@ def main():
                         outputs={"response": response},
                         tags=["streamlit", st.session_state.model_name],
                     )
-                    # 安全にRun成功を表示
+                    # 安全に成功表示
                     if run is not None and hasattr(run, "id"):
                         st.sidebar.success(f"✅ Run 作成成功: {run.id}")
                     else:
