@@ -219,7 +219,11 @@ def main():
                         outputs={"response": response},
                         tags=["streamlit", st.session_state.model_name],
                     )
-                    st.sidebar.success(f"✅ Run 作成成功: {run.id}")
+                    # 安全にRun成功を表示
+                    if run is not None and hasattr(run, "id"):
+                        st.sidebar.success(f"✅ Run 作成成功: {run.id}")
+                    else:
+                        st.sidebar.success("✅ Run 作成成功")
                 except Exception as log_err:
                     st.sidebar.error(f"❌ Run 作成失敗: {log_err}")
 
