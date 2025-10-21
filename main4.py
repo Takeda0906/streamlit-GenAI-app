@@ -5,24 +5,29 @@ from langchain.chat_models.openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
-from langsmith import Client
 
-# ==== LangSmith ログ設定 ====
+# ==== 安全に LangSmith を初期化 ====
 def setup_langsmith():
-    api_key = os.getenv("LANGCHAIN_API_KEY")
-    tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
+    try:
+        from langsmith import Client
+        api_key = os.getenv("LANGCHAIN_API_KEY")
+        tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
 
-    st.sidebar.markdown("## 🧠 LangSmith ログ設定")
-    if api_key and tracing_enabled:
-        st.sidebar.success("✅ LangSmith ログ送信が有効です。")
+        st.sidebar.markdown("## 🧠 LangSmith ログ設定")
+
+        if not api_key or not tracing_enabled:
+            st.sidebar.warning("⚠ LangSmith ログ送信が無効です。")
+            st.sidebar.caption("環境変数を設定してください。")
+            return None
+
         client = Client(api_key=api_key)
-        st.session_state["langsmith_client"] = client
-    else:
-        st.sidebar.warning("⚠ LangSmith ログ送信が無効です。")
-        st.sidebar.markdown("""
-        - `LANGCHAIN_API_KEY` が設定されているか確認してください  
-        - `LANGCHAIN_TRACING_V2=true` を環境変数に設定してください
-        """)
+        st.sidebar.success("✅ LangSmith ログ送信が有効です。")
+        return client
+
+    except Exception as e:
+        st.sidebar.error(f"LangSmith 初期化エラー: {e}")
+        return None
+
 
 # ==== モデル別価格設定 ====
 MODEL_PRICES = {
@@ -46,18 +51,20 @@ MODEL_PRICES = {
     },
 }
 
+
 # ==== 初期化 ====
 def init_page():
     st.set_page_config(page_title="AI Chat App", page_icon="🤖")
     st.header("AI Chat App 🤖")
     st.sidebar.title("設定")
-    setup_langsmith()
+
 
 def init_messages():
     if "message_history" not in st.session_state:
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
     if st.sidebar.button("💬 会話をリセット"):
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
+
 
 # ==== LLM初期化 ====
 def create_llm(model_choice, temperature):
@@ -84,6 +91,7 @@ def create_llm(model_choice, temperature):
     except Exception as e:
         st.error(f"モデル初期化失敗: {e}")
         return None
+
 
 # ==== モデル選択 ====
 def select_model():
@@ -114,16 +122,13 @@ def select_model():
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
         temperature = 1.0
     elif "Claude" in model_choice:
-        temperature = st.sidebar.slider(
-            "温度 (創造性):", 0.0, 1.0, default_temp, 0.01, key="temp_claude"
-        )
+        temperature = st.sidebar.slider("温度 (創造性):", 0.0, 1.0, default_temp, 0.01, key="temp_claude")
     else:
-        temperature = st.sidebar.slider(
-            "温度 (創造性):", 0.0, 2.0, default_temp, 0.01, key="temp_other"
-        )
+        temperature = st.sidebar.slider("温度 (創造性):", 0.0, 2.0, default_temp, 0.01, key="temp_other")
 
     st.session_state.temperature = float(temperature)
     st.session_state.llm = create_llm(model_choice, temperature)
+
 
 # ==== トークンカウント ====
 def get_token_count(text, model_name):
@@ -134,5 +139,86 @@ def get_token_count(text, model_name):
         return len(encoding.encode(text))
     except Exception:
         encoding = tiktoken.get_encoding("cl100k_base")
-        ret
+        return len(encoding.encode(text))
+
+
+# ==== コスト試算 ====
+def calc_and_display_costs():
+    if "model_name" not in st.session_state:
+        return
+    input_count = 0
+    output_count = 0
+    for role, message in st.session_state.message_history:
+        token_count = get_token_count(message, st.session_state.model_name)
+        if role == "ai":
+            output_count += token_count
+        else:
+            input_count += token_count
+    model = st.session_state.model_name
+    input_cost = MODEL_PRICES["input"].get(model, 0) * input_count
+    output_cost = MODEL_PRICES["output"].get(model, 0) * output_count
+    total = input_cost + output_cost
+    st.sidebar.markdown("## 💰 コスト試算")
+    st.sidebar.markdown(f"**合計:** ${total:.5f}")
+    st.sidebar.markdown(f"- 入力: ${input_cost:.5f}")
+    st.sidebar.markdown(f"- 出力: ${output_cost:.5f}")
+
+
+# ==== メイン ====
+def main():
+    init_page()
+    langsmith_client = setup_langsmith()
+    init_messages()
+    select_model()
+
+    if "llm" not in st.session_state or st.session_state.llm is None:
+        st.warning("モデルが初期化されていません。")
+        return
+
+    for role, message in st.session_state.get("message_history", []):
+        st.chat_message(role).markdown(message)
+
+    user_input = st.chat_input("メッセージを入力してください...")
+    if user_input:
+        st.chat_message("user").markdown(user_input)
+        try:
+            if "gemini" in st.session_state.model_name:
+                response = st.session_state.llm.invoke([{"role": "user", "content": user_input}]).content
+            elif "claude" in st.session_state.model_name:
+                response = st.session_state.llm.invoke(user_input).content
+            else:
+                messages_for_gpt = [
+                    HumanMessage(content=c)
+                    if r == "user"
+                    else AIMessage(content=c)
+                    if r in ["assistant", "ai"]
+                    else SystemMessage(content=c)
+                    for r, c in st.session_state.message_history
+                ]
+                messages_for_gpt.append(HumanMessage(content=user_input))
+                response = st.session_state.llm.invoke(messages_for_gpt).content
+
+            st.chat_message("ai").markdown(response)
+            st.session_state.message_history.extend([("user", user_input), ("ai", response)])
+
+            # LangSmith に安全にログ送信
+            if langsmith_client:
+                try:
+                    langsmith_client.create_run(
+                        name=f"Chat - {st.session_state.model_name}",
+                        inputs={"prompt": user_input},
+                        outputs={"response": response},
+                        tags=["streamlit", st.session_state.model_name],
+                    )
+                except Exception as log_err:
+                    st.sidebar.error(f"ログ送信失敗: {log_err}")
+
+        except Exception as e:
+            st.error(f"応答生成エラー: {e}")
+
+    calc_and_display_costs()
+
+
+if __name__ == "__main__":
+    main()
 
