@@ -41,10 +41,13 @@ def init_messages():
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
     if st.sidebar.button("💬 会話をリセット"):
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
+        # LLMも再生成
+        if "llm" in st.session_state:
+            del st.session_state.llm
 
 # ==== モデル選択 ====
 def select_model():
-    # セッションステート初期化
+    # セッション初期化
     if "model_choice" not in st.session_state:
         st.session_state.model_choice = "GPT-3.5"
     if "temperature" not in st.session_state:
@@ -53,27 +56,27 @@ def select_model():
     model_options = ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini",
                      "Claude 3 Haiku", "Gemini 2.5 Pro", "Gemini 2.5 Flash"]
 
-    model_choice = st.sidebar.radio(
+    # ラジオボタン
+    st.session_state.model_choice = st.sidebar.radio(
         "使用するモデルを選択:",
         model_options,
         index=model_options.index(st.session_state.model_choice)
     )
 
-    st.session_state.model_choice = model_choice
-
-    # 温度設定
-    if model_choice in ["GPT-5", "GPT-5 Mini"]:
+    # 温度スライダー
+    if st.session_state.model_choice in ["GPT-5", "GPT-5 Mini"]:
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
-        temperature = 1.0
-    elif "Claude" in model_choice:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, st.session_state.temperature, 0.01))
+        st.session_state.temperature = 1.0
+    elif "Claude" in st.session_state.model_choice:
+        st.session_state.temperature = st.sidebar.slider(
+            "温度 (創造性):", 0.0, 1.0, st.session_state.temperature, 0.01
+        )
     else:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, st.session_state.temperature, 0.01))
+        st.session_state.temperature = st.sidebar.slider(
+            "温度 (創造性):", 0.0, 2.0, st.session_state.temperature, 0.01
+        )
 
-    # ==== session_state に保存 ====
-    st.session_state.temperature = temperature
-
-    # モデル名決定
+    # モデル名マッピング
     model_name_map = {
         "GPT-3.5": "gpt-3.5-turbo",
         "GPT-4": "gpt-4o",
@@ -83,20 +86,25 @@ def select_model():
         "Gemini 2.5 Pro": "gemini-2.5-pro",
         "Gemini 2.5 Flash": "gemini-2.5-flash"
     }
-    model_name = model_name_map[model_choice]
-    st.session_state.model_name = model_name
+    st.session_state.model_name = model_name_map[st.session_state.model_choice]
 
     # モデルインスタンス生成
-    try:
-        if model_choice in ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini"]:
-            return ChatOpenAI(model_name=model_name, temperature=temperature)
-        elif "Claude" in model_choice:
-            return ChatAnthropic(model=model_name, temperature=temperature)
-        else:
-            return ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
-    except Exception as e:
-        st.error(f"モデル初期化失敗: {e}")
-        return None
+    if "llm" not in st.session_state:
+        try:
+            if st.session_state.model_choice in ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini"]:
+                st.session_state.llm = ChatOpenAI(model_name=st.session_state.model_name,
+                                                  temperature=st.session_state.temperature)
+            elif "Claude" in st.session_state.model_choice:
+                st.session_state.llm = ChatAnthropic(model=st.session_state.model_name,
+                                                    temperature=st.session_state.temperature)
+            else:
+                st.session_state.llm = ChatGoogleGenerativeAI(model=st.session_state.model_name,
+                                                              temperature=st.session_state.temperature)
+        except Exception as e:
+            st.error(f"モデル初期化失敗: {e}")
+            st.session_state.llm = None
+
+    return st.session_state.llm
 
 # ==== トークン数計算 ====
 def get_token_count(text, model_name):
@@ -134,9 +142,7 @@ def calc_and_display_costs():
 def main():
     init_page()
     init_messages()
-
-    if "llm" not in st.session_state or st.session_state.llm is None:
-        st.session_state.llm = select_model()
+    select_model()  # llmは session_state 内で保持
 
     # 履歴表示
     for role, message in st.session_state.get("message_history", []):
