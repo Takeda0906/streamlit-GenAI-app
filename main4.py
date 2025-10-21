@@ -23,7 +23,6 @@ def setup_langsmith():
             st.sidebar.warning("⚠ LangSmith APIキーが未設定です。")
             return None
 
-        # Client は api_key のみで初期化
         client = Client(api_key=api_key)
 
         if tracing_enabled:
@@ -210,10 +209,11 @@ def main():
             st.chat_message("ai").markdown(response)
             st.session_state.message_history.extend([("user", user_input), ("ai", response)])
 
-            # LangSmith に安全にログ送信（デバッグ付き）
+            # LangSmith に安全にログ送信（run_type 追加）
             if langsmith_client:
                 try:
                     run = langsmith_client.create_run(
+                        run_type="chat",  # ← 必須
                         name=f"Chat - {st.session_state.model_name}",
                         inputs={"prompt": user_input},
                         outputs={"response": response},
