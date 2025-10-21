@@ -15,12 +15,15 @@ def setup_langsmith():
         tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").strip().lower() in ["true", "1", "yes"]
 
         st.sidebar.markdown("## 🧠 LangSmith ログ設定")
+        st.sidebar.write("LANGCHAIN_API_KEY:", api_key)
+        st.sidebar.write("LANGCHAIN_TRACING_V2:", os.getenv("LANGCHAIN_TRACING_V2"))
+        st.sidebar.write("tracing_enabled:", tracing_enabled)
 
         if not api_key:
             st.sidebar.warning("⚠ LangSmith APIキーが未設定です。")
             return None
 
-        # Client は api_key のみで初期化（tracing は渡さない）
+        # Client は api_key のみで初期化
         client = Client(api_key=api_key)
 
         if tracing_enabled:
@@ -207,17 +210,18 @@ def main():
             st.chat_message("ai").markdown(response)
             st.session_state.message_history.extend([("user", user_input), ("ai", response)])
 
-            # LangSmith に安全にログ送信
+            # LangSmith に安全にログ送信（デバッグ付き）
             if langsmith_client:
                 try:
-                    langsmith_client.create_run(
+                    run = langsmith_client.create_run(
                         name=f"Chat - {st.session_state.model_name}",
                         inputs={"prompt": user_input},
                         outputs={"response": response},
                         tags=["streamlit", st.session_state.model_name],
                     )
+                    st.sidebar.success(f"✅ Run 作成成功: {run.id}")
                 except Exception as log_err:
-                    st.sidebar.error(f"ログ送信失敗: {log_err}")
+                    st.sidebar.error(f"❌ Run 作成失敗: {log_err}")
 
         except Exception as e:
             st.error(f"応答生成エラー: {e}")
