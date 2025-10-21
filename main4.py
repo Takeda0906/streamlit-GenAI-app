@@ -4,8 +4,7 @@ import tiktoken
 # ==== 最新 LangChain 1.x 用 Import ====
 from langchain.chat_models.openai import ChatOpenAI
 from langchain.chat_models.anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-
+from langchain.chat_models.google import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 
 # ==== モデル別価格設定（USD/1M tokens） ====
@@ -45,24 +44,32 @@ def init_messages():
 
 # ==== モデル選択 ====
 def select_model():
-    if "model_name" not in st.session_state:
-        st.session_state.model_name = "gpt-3.5-turbo"
+    # セッションステート初期化
+    if "model_choice" not in st.session_state:
+        st.session_state.model_choice = "GPT-3.5"
     if "temperature" not in st.session_state:
         st.session_state.temperature = 0.7
 
+    # ラジオボタンの値をセッションで保持
+    model_options = ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini",
+                     "Claude 3 Haiku", "Gemini 2.5 Pro", "Gemini 2.5 Flash"]
+
     model_choice = st.sidebar.radio(
         "使用するモデルを選択:",
-        ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini", "Claude 3 Haiku", "Gemini 2.5 Pro", "Gemini 2.5 Flash"]
+        model_options,
+        index=model_options.index(st.session_state.model_choice)
     )
+
+    st.session_state.model_choice = model_choice
 
     # 温度設定
     if model_choice in ["GPT-5", "GPT-5 Mini"]:
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
         temperature = 1.0
     elif "Claude" in model_choice:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, 0.7, 0.01))
+        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, st.session_state.temperature, 0.01))
     else:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, 0.7, 0.01))
+        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, st.session_state.temperature, 0.01))
 
     st.session_state.temperature = temperature
 
