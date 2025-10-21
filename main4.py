@@ -29,36 +29,49 @@ MODEL_PRICES = {
     }
 }
 
+# ==== ページ初期化 ====
 def init_page():
     st.set_page_config(page_title="AI Chat App", page_icon="🤖")
     st.header("AI Chat App 🤖")
     st.sidebar.title("設定")
 
+# ==== メッセージ履歴初期化 ====
 def init_messages():
     if "message_history" not in st.session_state:
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
     if st.sidebar.button("💬 会話をリセット"):
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
 
+# ==== モデル選択 ====
 def select_model():
-    # モデル選択の key による自動管理
+    # セッションステート初期化
+    if "model_choice" not in st.session_state:
+        st.session_state.model_choice = "GPT-3.5"
+    if "temperature" not in st.session_state:
+        st.session_state.temperature = 0.7
+
     model_options = ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini",
                      "Claude 3 Haiku", "Gemini 2.5 Pro", "Gemini 2.5 Flash"]
+
     model_choice = st.sidebar.radio(
         "使用するモデルを選択:",
         model_options,
-        index=model_options.index(st.session_state.get("model_choice", "GPT-3.5")),
-        key="model_choice"
+        index=model_options.index(st.session_state.model_choice)
     )
 
-    # 温度スライダーも key 管理で session_state 自動保存
+    st.session_state.model_choice = model_choice
+
+    # 温度設定
     if model_choice in ["GPT-5", "GPT-5 Mini"]:
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
         temperature = 1.0
     elif "Claude" in model_choice:
-        temperature = st.sidebar.slider("温度 (創造性):", 0.0, 1.0, st.session_state.get("temperature", 0.7), 0.01, key="temperature")
+        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, st.session_state.temperature, 0.01))
     else:
-        temperature = st.sidebar.slider("温度 (創造性):", 0.0, 2.0, st.session_state.get("temperature", 0.7), 0.01, key="temperature")
+        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, st.session_state.temperature, 0.01))
+
+    # ==== session_state に保存 ====
+    st.session_state.temperature = temperature
 
     # モデル名決定
     model_name_map = {
@@ -71,6 +84,7 @@ def select_model():
         "Gemini 2.5 Flash": "gemini-2.5-flash"
     }
     model_name = model_name_map[model_choice]
+    st.session_state.model_name = model_name
 
     # モデルインスタンス生成
     try:
@@ -84,6 +98,7 @@ def select_model():
         st.error(f"モデル初期化失敗: {e}")
         return None
 
+# ==== トークン数計算 ====
 def get_token_count(text, model_name):
     if "gemini" in model_name:
         return len(text) // 2
@@ -91,6 +106,7 @@ def get_token_count(text, model_name):
         encoding = tiktoken.encoding_for_model(model_name if "gpt" in model_name else "gpt-3.5-turbo")
         return len(encoding.encode(text))
 
+# ==== コスト計算 ====
 def calc_and_display_costs():
     input_count = 0
     output_count = 0
@@ -114,11 +130,11 @@ def calc_and_display_costs():
     st.sidebar.markdown(f"- 入力コスト: ${input_cost:.5f}")
     st.sidebar.markdown(f"- 出力コスト: ${output_cost:.5f}")
 
+# ==== メイン処理 ====
 def main():
     init_page()
     init_messages()
 
-    # モデル取得
     if "llm" not in st.session_state or st.session_state.llm is None:
         st.session_state.llm = select_model()
 
@@ -132,10 +148,9 @@ def main():
         st.chat_message("user").markdown(user_input)
 
         try:
-            model_name = st.session_state.get("model_name", st.session_state.get("llm").model_name)
-            if "gemini" in model_name:
+            if "gemini" in st.session_state.model_name:
                 response = st.session_state.llm.invoke([{"role": "user", "content": user_input}]).content
-            elif "claude" in model_name:
+            elif "claude" in st.session_state.model_name:
                 response = st.session_state.llm.invoke(user_input).content
             else:
                 messages_for_gpt = [
@@ -148,6 +163,8 @@ def main():
                 response = st.session_state.llm.invoke(messages_for_gpt).content
 
             st.chat_message("ai").markdown(response)
+
+            # 履歴更新
             st.session_state.message_history.append(("user", user_input))
             st.session_state.message_history.append(("ai", response))
 
