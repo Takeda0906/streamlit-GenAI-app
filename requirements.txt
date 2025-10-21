@@ -23,7 +23,7 @@ SQLAlchemy==2.0.20
 jsonpatch==1.33
 langsmith==0.1.17
 tenacity==8.2.0
-packaging==23.3
+packaging==23.2
 defusedxml==0.7.1
 pydantic==1.10.13
 
