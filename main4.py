@@ -58,7 +58,6 @@ def select_model():
         model_options,
         index=model_options.index(st.session_state.model_choice)
     )
-
     st.session_state.model_choice = model_choice
 
     # 温度設定
@@ -66,13 +65,16 @@ def select_model():
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
         temperature = 1.0
     elif "Claude" in model_choice:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, st.session_state.temperature, 0.01))
-    else:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, st.session_state.temperature, 0.01))
-
+        temperature = st.sidebar.slider(
+            "温度 (創造性):", 0.0, 1.0, value=st.session_state.temperature, step=0.01
+        )
+    else:  # GPT-3.5, GPT-4, Gemini
+        temperature = st.sidebar.slider(
+            "温度 (創造性):", 0.0, 2.0, value=st.session_state.temperature, step=0.01
+        )
     st.session_state.temperature = temperature
 
-    # モデル名決定
+    # モデル名マッピング
     model_name_map = {
         "GPT-3.5": "gpt-3.5-turbo",
         "GPT-4": "gpt-4o",
@@ -97,16 +99,17 @@ def select_model():
         st.error(f"モデル初期化失敗: {e}")
         return None
 
-# ==== トークン数計算（tiktoken未対応モデルはフォールバック） ====
+# ==== トークン数計算 ====
 def get_token_count(text, model_name):
     if "gemini" in model_name:
         return len(text) // 2
-    try:
-        encoding = tiktoken.encoding_for_model(model_name)
-    except KeyError:
-        # 未対応モデルは gpt-3.5-turbo で代替
-        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    return len(encoding.encode(text))
+    else:
+        try:
+            encoding = tiktoken.encoding_for_model(model_name if "gpt" in model_name else "gpt-3.5-turbo")
+            return len(encoding.encode(text))
+        except KeyError:
+            # モデルが tiktoken 未対応の場合の安全処理
+            return len(text.split())
 
 # ==== コスト計算 ====
 def calc_and_display_costs():
