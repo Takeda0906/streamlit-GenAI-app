@@ -11,17 +11,21 @@ def setup_langsmith():
     try:
         from langsmith import Client
         api_key = os.getenv("LANGCHAIN_API_KEY")
-        tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
+        tracing_env = os.getenv("LANGCHAIN_TRACING_V2", "")
+        tracing_enabled = tracing_env.strip().lower() in ["true", "1", "yes"]
 
         st.sidebar.markdown("## 🧠 LangSmith ログ設定")
 
-        if not api_key or not tracing_enabled:
-            st.sidebar.warning("⚠ LangSmith ログ送信が無効です。")
-            st.sidebar.caption("環境変数を設定してください。")
+        if not api_key:
+            st.sidebar.warning("⚠ LangSmith APIキーが未設定です。")
             return None
 
-        client = Client(api_key=api_key)
-        st.sidebar.success("✅ LangSmith ログ送信が有効です。")
+        client = Client(api_key=api_key, tracing=tracing_enabled)
+
+        if tracing_enabled:
+            st.sidebar.success("✅ LangSmith ログ送信が有効です。")
+        else:
+            st.sidebar.warning("⚠ LangSmith ログ送信は無効です。")
         return client
 
     except Exception as e:
