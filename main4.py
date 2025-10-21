@@ -5,7 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 import tiktoken
 
-# ==== モデル別価格設定（USD/1M tokens） ====
+# モデル別価格設定
 MODEL_PRICES = {
     "input": {
         "gpt-3.5-turbo": 0.5 / 1_000_000,
@@ -27,20 +27,17 @@ MODEL_PRICES = {
     }
 }
 
-# ==== ページ初期化 ====
 def init_page():
     st.set_page_config(page_title="AI Chat App", page_icon="🤖")
     st.header("AI Chat App 🤖")
     st.sidebar.title("設定")
 
-# ==== メッセージ履歴初期化 ====
 def init_messages():
     if "message_history" not in st.session_state:
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
     if st.sidebar.button("💬 会話をリセット"):
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
 
-# ==== モデル選択 ====
 def select_model():
     if "model_name" not in st.session_state:
         st.session_state.model_name = "gpt-3.5-turbo"
@@ -62,23 +59,22 @@ def select_model():
 
     st.session_state.temperature = temperature
 
-    # モデルインスタンス生成（Streamlit Cloud 対応）
+    # 古い SDK 向け model 引数使用
     if model_choice == "GPT-3.5":
         st.session_state.model_name = "gpt-3.5-turbo"
-        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+        return ChatOpenAI(model=st.session_state.model_name, temperature=temperature)
     elif model_choice == "GPT-4":
         st.session_state.model_name = "gpt-4o"
-        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+        return ChatOpenAI(model=st.session_state.model_name, temperature=temperature)
     elif model_choice == "GPT-5":
         st.session_state.model_name = "gpt-5"
-        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+        return ChatOpenAI(model=st.session_state.model_name, temperature=temperature)
     elif model_choice == "GPT-5 Mini":
         st.session_state.model_name = "gpt-5-mini"
-        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+        return ChatOpenAI(model=st.session_state.model_name, temperature=temperature)
     elif model_choice == "Claude 3 Haiku":
         st.session_state.model_name = "claude-3-haiku-20240307"
-        # 修正: model_name を使用、proxies は渡さない
-        return ChatAnthropic(model_name=st.session_state.model_name, temperature=temperature)
+        return ChatAnthropic(model=st.session_state.model_name, temperature=temperature)
     elif model_choice == "Gemini 2.5 Pro":
         st.session_state.model_name = "gemini-2.5-pro"
         return ChatGoogleGenerativeAI(model=st.session_state.model_name, temperature=temperature)
@@ -86,7 +82,7 @@ def select_model():
         st.session_state.model_name = "gemini-2.5-flash"
         return ChatGoogleGenerativeAI(model=st.session_state.model_name, temperature=temperature)
 
-# ==== トークン数計算 ====
+# トークン数計算
 def get_token_count(text, model_name):
     if "gemini" in model_name:
         return len(text) // 2
@@ -94,7 +90,7 @@ def get_token_count(text, model_name):
         encoding = tiktoken.encoding_for_model(model_name if "gpt" in model_name else "gpt-3.5-turbo")
         return len(encoding.encode(text))
 
-# ==== コスト計算 ====
+# コスト計算
 def calc_and_display_costs():
     input_count = 0
     output_count = 0
@@ -118,25 +114,21 @@ def calc_and_display_costs():
     st.sidebar.markdown(f"- 入力コスト: ${input_cost:.5f}")
     st.sidebar.markdown(f"- 出力コスト: ${output_cost:.5f}")
 
-# ==== メイン処理 ====
+# メイン処理
 def main():
     init_page()
     init_messages()
 
-    # LLM 初期化
     if "llm" not in st.session_state or st.session_state.llm is None:
         st.session_state.llm = select_model()
 
-    # 履歴表示
     for role, message in st.session_state.get("message_history", []):
         st.chat_message(role).markdown(message)
 
-    # 入力受付
     user_input = st.chat_input("メッセージを入力してください...")
     if user_input:
         st.chat_message("user").markdown(user_input)
 
-        # LLM応答生成
         if "gemini" in st.session_state.model_name:
             response = st.session_state.llm.invoke([{"role": "user", "content": user_input}]).content
         elif "claude" in st.session_state.model_name:
@@ -155,11 +147,9 @@ def main():
 
         st.chat_message("ai").markdown(response)
 
-        # 履歴更新
         st.session_state.message_history.append(("user", user_input))
         st.session_state.message_history.append(("ai", response))
 
-    # コスト表示
     calc_and_display_costs()
 
 if __name__ == "__main__":
