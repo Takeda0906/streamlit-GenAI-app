@@ -50,27 +50,28 @@ def select_model():
     if "temperature" not in st.session_state:
         st.session_state.temperature = 0.7
 
-    # ラジオボタンの値をセッションで保持
+    # モデル選択（key で自動保存）
     model_options = ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini",
                      "Claude 3 Haiku", "Gemini 2.5 Pro", "Gemini 2.5 Flash"]
-
     model_choice = st.sidebar.radio(
         "使用するモデルを選択:",
         model_options,
         index=model_options.index(st.session_state.model_choice),
-        key="model_choice"  # ここでセッションに保持
+        key="model_choice"
     )
 
-    st.session_state.model_choice = model_choice
-
-    # 温度設定
+    # 温度設定（key で自動保存）
     if model_choice in ["GPT-5", "GPT-5 Mini"]:
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
         temperature = 1.0
     elif "Claude" in model_choice:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, st.session_state.temperature, 0.01))
+        temperature = st.sidebar.slider(
+            "温度 (創造性):", 0.0, 1.0, st.session_state.get("temperature", 0.7), 0.01, key="temperature"
+        )
     else:
-        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, st.session_state.temperature, 0.01))
+        temperature = st.sidebar.slider(
+            "温度 (創造性):", 0.0, 2.0, st.session_state.get("temperature", 0.7), 0.01, key="temperature"
+        )
 
     st.session_state.temperature = temperature
 
