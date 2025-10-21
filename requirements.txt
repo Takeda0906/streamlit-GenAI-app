@@ -1,32 +1,36 @@
-openai==1.6.0
+# ==== OpenAI SDK ====
+openai>=1.29.0
+
 # ==== LangChain 系ライブラリ ====
-langchain==0.3.27
-langchain-core==0.3.76
-langchain-community==0.3.29
+langchain>=1.0.0
+langchain-core>=1.0.0
+langchain-community>=0.0.271
 langsmith>=0.3.45,<0.4.0
-langchain-anthropic>=0.3.0,<1.0.0
+langchain-anthropic>=1.0.0
 langchain-google-genai>=1.0.3
 
 # ==== AI / HTTP / データ処理 ====
-pandas==2.3.3
-numpy==1.26.4
-python-dateutil==2.9.0.post0
-pytz==2025.2
-PyYAML==6.0.3
-requests==2.32.5
-urllib3==2.5.0
-SQLAlchemy==2.0.20
-jsonpatch==1.33
-tenacity==8.2.0
+pandas>=2.3.3
+numpy>=1.26.4
+python-dateutil>=2.9.0
+pytz>=2025.2
+PyYAML>=6.0.3
+requests>=2.32.5
+urllib3>=2.5.0
+SQLAlchemy>=2.0.20
+jsonpatch>=1.33
+tenacity>=8.2.0
 dataclasses-json>=0.6.7,<0.7.0
 
 # ==== Streamlit 関連 ====
-streamlit==1.50.0
-rich==14.2.0
-markdown-it-py==4.0.0
-pygments==2.19.2
-mdurl==0.1.2
+streamlit>=1.30
+rich>=14.2.0
+markdown-it-py>=4.0.0
+pygments>=2.19.2
+mdurl>=0.1.2
+
+# ==== トークン計算用 ====
+tiktoken>=0.4.0,<0.5.0
 
 # ==== その他推奨パッケージ ====
 packaging>=23.0,<24.0
-tiktoken>=0.4.0,<0.5.0
