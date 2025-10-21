@@ -57,7 +57,8 @@ def select_model():
     model_choice = st.sidebar.radio(
         "使用するモデルを選択:",
         model_options,
-        index=model_options.index(st.session_state.model_choice)
+        index=model_options.index(st.session_state.model_choice),
+        key="model_choice"  # ここでセッションに保持
     )
 
     st.session_state.model_choice = model_choice
