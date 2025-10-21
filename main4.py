@@ -4,7 +4,7 @@ import tiktoken
 # ==== 最新 LangChain 1.x 用 Import ====
 from langchain.chat_models.openai import ChatOpenAI
 from langchain.chat_models.anthropic import ChatAnthropic
-from langchain.chat_models.google import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 
 # ==== モデル別価格設定（USD/1M tokens） ====
