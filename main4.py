@@ -1,10 +1,11 @@
 import streamlit as st
-from langchain.chat_models import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema import HumanMessage, AIMessage, SystemMessage
 import tiktoken
-import os
+
+# ==== 最新 LangChain 1.x 用 Import ====
+from langchain.chat_models.openai import ChatOpenAI
+from langchain.chat_models.anthropic import ChatAnthropic
+from langchain.chat_models.google import ChatGoogleGenerativeAI
+from langchain.schema import HumanMessage, AIMessage, SystemMessage
 
 # ==== モデル別価格設定（USD/1M tokens） ====
 MODEL_PRICES = {
@@ -41,9 +42,8 @@ def init_messages():
     if st.sidebar.button("💬 会話をリセット"):
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
 
-# ==== モデル選択（最新版 LangChain 対応） ====
+# ==== モデル選択 ====
 def select_model():
-    # 初期値設定
     if "model_name" not in st.session_state:
         st.session_state.model_name = "gpt-3.5-turbo"
     if "temperature" not in st.session_state:
