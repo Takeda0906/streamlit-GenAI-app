@@ -6,7 +6,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 
-# ==== 安全に LangSmith を初期化 ====
+# ==== 安全に LangSmith を初期化（表示なし） ====
 def setup_langsmith():
     try:
         from langsmith import Client
@@ -14,27 +14,15 @@ def setup_langsmith():
         api_key = os.getenv("LANGCHAIN_API_KEY")
         tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").strip().lower() in ["true", "1", "yes"]
 
-        st.sidebar.markdown("## 🧠 LangSmith ログ設定")
-        # デバッグ用表示（不要な場合コメントアウト）
-        # st.sidebar.write("LANGCHAIN_API_KEY:", api_key)
-        # st.sidebar.write("LANGCHAIN_TRACING_V2:", os.getenv("LANGCHAIN_TRACING_V2"))
-        # st.sidebar.write("tracing_enabled:", tracing_enabled)
-
         if not api_key:
-            st.sidebar.warning("⚠ LangSmith APIキーが未設定です。")
+            # APIキー未設定でも警告は表示せず None を返す
             return None
 
         client = Client(api_key=api_key)
-
-        if tracing_enabled:
-            st.sidebar.success("✅ LangSmith ログ送信が有効です")
-        else:
-            st.sidebar.warning("⚠ LangSmith ログ送信は無効です（LANGCHAIN_TRACING_V2 を確認）")
-
         return client
 
     except Exception as e:
-        st.sidebar.error(f"LangSmith 初期化エラー: {e}")
+        # 初期化エラーも非表示で None を返す
         return None
 
 
@@ -176,7 +164,7 @@ def calc_and_display_costs():
 # ==== メイン ====
 def main():
     init_page()
-    langsmith_client = setup_langsmith()
+    langsmith_client = setup_langsmith()  # 表示なし
     init_messages()
     select_model()
 
@@ -220,13 +208,8 @@ def main():
                         outputs={"response": response},
                         tags=["streamlit", st.session_state.model_name],
                     )
-                    # 安全に成功表示
-                    if run is not None and hasattr(run, "id"):
-                        st.sidebar.success(f"✅ Run 作成成功: {run.id}")
-                    else:
-                        st.sidebar.success("✅ Run 作成成功")
-                except Exception as log_err:
-                    st.sidebar.error(f"❌ Run 作成失敗: {log_err}")
+                except Exception:
+                    pass  # Run作成失敗でも非表示
 
         except Exception as e:
             st.error(f"応答生成エラー: {e}")
