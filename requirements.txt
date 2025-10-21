@@ -1,20 +1,11 @@
-# ======== LangChain 関連 ========
-langchain-community==0.2.0
-langchain-text-splitters==0.2.0
-langchain>=0.2.0,<0.3.0
-langchain-core>=0.2.0,<0.3.0
+# ==== LangChain 系ライブラリ ====
+langchain==0.2.43
+langchain-core==0.2.43
 langsmith>=0.1.112,<0.2.0
 
-# ======== OpenAI / AI SDK ========
-openai==1.109.1
-anthropic==0.71.0
-google-generativeai==0.5.4
-
-# ======== 基本パッケージ ========
-aiohttp==3.13.1
-attrs==25.4.0
-numpy==1.26.4
+# ==== AI / HTTP / データ処理 ====
 pandas==2.3.3
+numpy==1.26.4
 python-dateutil==2.9.0.post0
 pytz==2025.2
 PyYAML==6.0.3
@@ -23,16 +14,14 @@ urllib3==2.5.0
 SQLAlchemy==2.0.20
 jsonpatch==1.33
 tenacity==8.2.0
-packaging==23.2
-defusedxml==0.7.1
-pydantic==1.10.13
+dataclasses-json>=0.6.7,<0.7.0
 
-# ======== その他ユーティリティ ========
-tiktoken==0.12.0
-typing_extensions==4.15.0
-watchdog==6.0.0
+# ==== Streamlit 関連 ====
 streamlit==1.50.0
 rich==14.2.0
 markdown-it-py==4.0.0
 pygments==2.19.2
 mdurl==0.1.2
+
+# ==== その他推奨パッケージ ====
+packaging>=23.0,<24.0
