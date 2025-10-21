@@ -10,9 +10,9 @@ from langchain.schema import HumanMessage, AIMessage, SystemMessage
 def setup_langsmith():
     try:
         from langsmith import Client
+
         api_key = os.getenv("LANGCHAIN_API_KEY")
-        tracing_env = os.getenv("LANGCHAIN_TRACING_V2", "")
-        tracing_enabled = tracing_env.strip().lower() in ["true", "1", "yes"]
+        tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").strip().lower() in ["true", "1", "yes"]
 
         st.sidebar.markdown("## 🧠 LangSmith ログ設定")
 
@@ -20,12 +20,14 @@ def setup_langsmith():
             st.sidebar.warning("⚠ LangSmith APIキーが未設定です。")
             return None
 
-        client = Client(api_key=api_key, tracing=tracing_enabled)
+        # Client は api_key のみで初期化（tracing は渡さない）
+        client = Client(api_key=api_key)
 
         if tracing_enabled:
-            st.sidebar.success("✅ LangSmith ログ送信が有効です。")
+            st.sidebar.success("✅ LangSmith ログ送信が有効です")
         else:
-            st.sidebar.warning("⚠ LangSmith ログ送信は無効です。")
+            st.sidebar.warning("⚠ LangSmith ログ送信は無効です（LANGCHAIN_TRACING_V2 を確認）")
+
         return client
 
     except Exception as e:
@@ -225,4 +227,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
