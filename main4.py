@@ -4,7 +4,6 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage, AIMessage, SystemMessage
 import tiktoken
-import os
 
 # ==== モデル別価格設定（USD/1M tokens） ====
 MODEL_PRICES = {
@@ -41,9 +40,8 @@ def init_messages():
     if st.sidebar.button("💬 会話をリセット"):
         st.session_state.message_history = [("system", "You are a helpful assistant.")]
 
-# ==== モデル選択（安全版） ====
+# ==== モデル選択 ====
 def select_model():
-    # 初期値設定
     if "model_name" not in st.session_state:
         st.session_state.model_name = "gpt-3.5-turbo"
     if "temperature" not in st.session_state:
@@ -54,49 +52,39 @@ def select_model():
         ["GPT-3.5", "GPT-4", "GPT-5", "GPT-5 Mini", "Claude 3 Haiku", "Gemini 2.5 Pro", "Gemini 2.5 Flash"]
     )
 
-    # モデルごとの温度設定
     if model_choice in ["GPT-5", "GPT-5 Mini"]:
         st.sidebar.info("⚠ GPT-5 系モデルは固定温度 1 のみ使用可能です。")
         temperature = 1.0
     elif "Claude" in model_choice:
-        temperature = st.sidebar.slider("温度 (創造性):", 0.0, 1.0, 0.7, 0.01)
+        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 1.0, 0.7, 0.01))
     else:
-        temperature = st.sidebar.slider("温度 (創造性):", 0.0, 2.0, 0.7, 0.01)
-
-    # 安全に float 変換
-    try:
-        temperature = float(temperature)
-    except Exception:
-        temperature = 0.7
+        temperature = float(st.sidebar.slider("温度 (創造性):", 0.0, 2.0, 0.7, 0.01))
 
     st.session_state.temperature = temperature
 
-    # モデルインスタンス生成（安全に try-except）
-    try:
-        if model_choice == "GPT-3.5":
-            st.session_state.model_name = "gpt-3.5-turbo"
-            return ChatOpenAI(model_name=str(st.session_state.model_name), temperature=temperature)
-        elif model_choice == "GPT-4":
-            st.session_state.model_name = "gpt-4o"
-            return ChatOpenAI(model_name=str(st.session_state.model_name), temperature=temperature)
-        elif model_choice == "GPT-5":
-            st.session_state.model_name = "gpt-5"
-            return ChatOpenAI(model_name=str(st.session_state.model_name), temperature=temperature)
-        elif model_choice == "GPT-5 Mini":
-            st.session_state.model_name = "gpt-5-mini"
-            return ChatOpenAI(model_name=str(st.session_state.model_name), temperature=temperature)
-        elif model_choice == "Claude 3 Haiku":
-            st.session_state.model_name = "claude-3-haiku-20240307"
-            return ChatAnthropic(model=str(st.session_state.model_name), temperature=temperature)
-        elif model_choice == "Gemini 2.5 Pro":
-            st.session_state.model_name = "gemini-2.5-pro"
-            return ChatGoogleGenerativeAI(model=str(st.session_state.model_name), temperature=temperature)
-        elif model_choice == "Gemini 2.5 Flash":
-            st.session_state.model_name = "gemini-2.5-flash"
-            return ChatGoogleGenerativeAI(model=str(st.session_state.model_name), temperature=temperature)
-    except Exception as e:
-        st.error(f"モデルの初期化に失敗しました: {e}")
-        return None
+    # モデルインスタンス生成（Streamlit Cloud 対応）
+    if model_choice == "GPT-3.5":
+        st.session_state.model_name = "gpt-3.5-turbo"
+        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+    elif model_choice == "GPT-4":
+        st.session_state.model_name = "gpt-4o"
+        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+    elif model_choice == "GPT-5":
+        st.session_state.model_name = "gpt-5"
+        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+    elif model_choice == "GPT-5 Mini":
+        st.session_state.model_name = "gpt-5-mini"
+        return ChatOpenAI(model_name=st.session_state.model_name, temperature=temperature)
+    elif model_choice == "Claude 3 Haiku":
+        st.session_state.model_name = "claude-3-haiku-20240307"
+        # 修正: model_name を使用、proxies は渡さない
+        return ChatAnthropic(model_name=st.session_state.model_name, temperature=temperature)
+    elif model_choice == "Gemini 2.5 Pro":
+        st.session_state.model_name = "gemini-2.5-pro"
+        return ChatGoogleGenerativeAI(model=st.session_state.model_name, temperature=temperature)
+    elif model_choice == "Gemini 2.5 Flash":
+        st.session_state.model_name = "gemini-2.5-flash"
+        return ChatGoogleGenerativeAI(model=st.session_state.model_name, temperature=temperature)
 
 # ==== トークン数計算 ====
 def get_token_count(text, model_name):
@@ -121,8 +109,8 @@ def calc_and_display_costs():
         return
 
     model = st.session_state.model_name
-    input_cost = MODEL_PRICES["input"].get(model, 0) * input_count
-    output_cost = MODEL_PRICES["output"].get(model, 0) * output_count
+    input_cost = MODEL_PRICES["input"][model] * input_count
+    output_cost = MODEL_PRICES["output"][model] * output_count
     total_cost = input_cost + output_cost
 
     st.sidebar.markdown("## 💰 コスト試算")
@@ -145,34 +133,31 @@ def main():
 
     # 入力受付
     user_input = st.chat_input("メッセージを入力してください...")
-    if user_input and st.session_state.llm is not None:
+    if user_input:
         st.chat_message("user").markdown(user_input)
 
         # LLM応答生成
-        try:
-            if "gemini" in st.session_state.model_name:
-                response = st.session_state.llm.invoke([{"role": "user", "content": user_input}]).content
-            elif "claude" in st.session_state.model_name:
-                response = st.session_state.llm.invoke(user_input).content
-            else:
-                messages_for_gpt = []
-                for role, content in st.session_state.message_history:
-                    if role == "user":
-                        messages_for_gpt.append(HumanMessage(content=content))
-                    elif role in ["assistant", "ai"]:
-                        messages_for_gpt.append(AIMessage(content=content))
-                    else:
-                        messages_for_gpt.append(SystemMessage(content=content))
-                messages_for_gpt.append(HumanMessage(content=user_input))
-                response = st.session_state.llm.invoke(messages_for_gpt).content
+        if "gemini" in st.session_state.model_name:
+            response = st.session_state.llm.invoke([{"role": "user", "content": user_input}]).content
+        elif "claude" in st.session_state.model_name:
+            response = st.session_state.llm.invoke(user_input).content
+        else:
+            messages_for_gpt = []
+            for role, content in st.session_state.message_history:
+                if role == "user":
+                    messages_for_gpt.append(HumanMessage(content=content))
+                elif role in ["assistant", "ai"]:
+                    messages_for_gpt.append(AIMessage(content=content))
+                else:
+                    messages_for_gpt.append(SystemMessage(content=content))
+            messages_for_gpt.append(HumanMessage(content=user_input))
+            response = st.session_state.llm.invoke(messages_for_gpt).content
 
-            st.chat_message("ai").markdown(response)
+        st.chat_message("ai").markdown(response)
 
-            # 履歴更新
-            st.session_state.message_history.append(("user", user_input))
-            st.session_state.message_history.append(("ai", response))
-        except Exception as e:
-            st.error(f"LLM 応答生成でエラーが発生しました: {e}")
+        # 履歴更新
+        st.session_state.message_history.append(("user", user_input))
+        st.session_state.message_history.append(("ai", response))
 
     # コスト表示
     calc_and_display_costs()
